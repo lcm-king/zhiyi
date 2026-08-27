@@ -1,0 +1,11 @@
+.env
+.env.*
+docker/
+scripts/
+dist/
+.git
+.gitignore
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.log

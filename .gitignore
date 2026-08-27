@@ -1,0 +1,42 @@
+# ── 环境变量（含真实密钥，切勿提交）──
+.env
+.env.*
+!.env.example
+
+# ── 依赖与构建产物 ──
+node_modules/
+dist/
+*.local
+
+# ── Python 缓存 ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── IDE / 编辑器 ──
+.idea/
+.vscode/
+*.swp
+
+# ── 构建缓存与工具目录 ──
+.vite/
+.superpowers/
+.vite-cache/
+
+# ── 项目私有数据 ──
+.workbuddy/
+
+# ── 数据备份（含真实数据）──
+zhiyi_backend/docker/mysql/backup_before_v2_migration.sql
+
+# ── 杂项 ──
+_run.ps1
+*.log
+.DS_Store
+Thumbs.db
+
+# ── 临时调试脚本 ──
+zhiyi_backend/_q.py
+zhiyi_backend/app/_probe_rag*.py

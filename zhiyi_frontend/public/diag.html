@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智医 · 订单诊断</title>
+<style>
+body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+.box { padding: 16px; margin: 12px 0; border-radius: 8px; border: 1px solid #ddd; }
+.ok { background: #f0fdf4; border-color: #86efac; }
+.fail { background: #fef2f2; border-color: #fca5a5; }
+.info { background: #eff6ff; border-color: #93c5fd; }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+button { padding: 10px 24px; font-size: 14px; cursor: pointer; border-radius: 8px; border: 1px solid #3b82f6; background: #3b82f6; color: #fff; }
+button:hover { background: #2563eb; }
+</style>
+</head>
+<body>
+<h1>智医 · 订单加载诊断</h1>
+<p>这个页面直接调用后端 API，验证订单数据是否正常返回。</p>
+<button onclick="runDiag()">开始诊断</button>
+<div id="output"></div>
+
+<script>
+const API = '/api'
+const out = document.getElementById('output')
+
+function log(cls, title, content) {
+  const div = document.createElement('div')
+  div.className = 'box ' + cls
+  div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`
+  out.appendChild(div)
+}
+
+async function runDiag() {
+  out.innerHTML = ''
+
+  // 1. Login
+  try {
+    const resp = await fetch(`${API}/auth/demo-login?role=patient`, { method: 'POST' })
+    const data = await resp.json()
+    const token = data.access_token
+    log('ok', '1. 患者登录', `Token: ${token?.slice(0,30)}...\n用户: ${data.name} (ID: ${data.id})`)
+
+    // 2. 药品订单
+    try {
+      const r2 = await fetch(`${API}/drugs/orders`, { headers: { Authorization: `Bearer ${token}` } })
+      const d2 = await r2.json()
+      log(r2.ok ? 'ok' : 'fail', `2. 药品订单 (HTTP ${r2.status})`, `共 ${Array.isArray(d2) ? d2.length : '?'} 条\n前2条: ${JSON.stringify(d2.slice(0,2), null, 2)}`)
+    } catch(e) {
+      log('fail', '2. 药品订单失败', e.message)
+    }
+
+    // 3. 检查订单
+    try {
+      const r3 = await fetch(`${API}/exams/orders`, { headers: { Authorization: `Bearer ${token}` } })
+      const d3 = await r3.json()
+      log(r3.ok ? 'ok' : 'fail', `3. 检查订单 (HTTP ${r3.status})`, `共 ${Array.isArray(d3) ? d3.length : '?'} 条\n前2条: ${JSON.stringify(d3.slice(0,2), null, 2)}`)
+    } catch(e) {
+      log('fail', '3. 检查订单失败', e.message)
+    }
+
+    // 4. 创建新药品订单
+    try {
+      const r4 = await fetch(`${API}/drugs/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ items: [{ drug_id: 3, quantity: 1 }], address: 'Shanghai Test Address' })
+      })
+      const d4 = await r4.json()
+      log(r4.ok ? 'ok' : 'fail', `4. 创建药品订单 (HTTP ${r4.status})`, JSON.stringify(d4, null, 2))
+    } catch(e) {
+      log('fail', '4. 创建订单失败', e.message)
+    }
+
+    // 5. 再查药品订单
+    try {
+      const r5 = await fetch(`${API}/drugs/orders`, { headers: { Authorization: `Bearer ${token}` } })
+      const d5 = await r5.json()
+      log('info', `5. 创建后再查药品订单`, `共 ${Array.isArray(d5) ? d5.length : '?'} 条`)
+    } catch(e) {
+      log('fail', '5. 查询失败', e.message)
+    }
+
+  } catch(e) {
+    log('fail', '登录失败', e.message)
+  }
+}
+</script>
+</body>
+</html>

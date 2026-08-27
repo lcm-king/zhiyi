@@ -1,0 +1,28 @@
+/* ============================================================
+   AI 回答 Markdown 渲染（全局样式，作用于所有 .md-body 容器）
+   ============================================================ */
+.md-body { line-height: 1.65; word-break: break-word; }
+.md-body p { margin: 6px 0; }
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4 { margin: 12px 0 6px; font-weight: 700; line-height: 1.4; }
+.md-body h1 { font-size: 17px; }
+.md-body h2 { font-size: 16px; }
+.md-body h3 { font-size: 15px; }
+.md-body h4 { font-size: 14px; }
+.md-body ul,
+.md-body ol { margin: 6px 0; padding-left: 22px; }
+.md-body li { margin: 4px 0; }
+.md-body code { background: rgba(0, 0, 0, .07); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; font-family: Consolas, Menlo, monospace; }
+.md-body pre { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 10px; overflow-x: auto; margin: 8px 0; }
+.md-body pre code { background: none; color: inherit; padding: 0; font-size: 12.5px; }
+.md-body blockquote { border-left: 3px solid var(--primary); margin: 8px 0; padding: 6px 12px; background: rgba(59, 130, 246, .07); border-radius: 0 10px 10px 0; }
+.md-body blockquote p { margin: 4px 0; }
+.md-body table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12.5px; }
+.md-body th,
+.md-body td { border: 1px solid var(--border-light); padding: 7px 10px; text-align: left; }
+.md-body th { background: rgba(59, 130, 246, .1); font-weight: 600; }
+.md-body .md-table-wrap { overflow-x: auto; }
+.md-body a { color: var(--primary); }
+.md-body hr { border: none; border-top: 1px solid var(--border-light); margin: 12px 0; }

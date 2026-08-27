@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>智医 · 收银台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f5f6f8;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{width:420px;max-width:96vw;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.12);overflow:hidden}
+.head{background:linear-gradient(135deg,#1677FF,#2563EB);padding:24px 28px;color:#fff}
+.head h2{font-size:20px;margin-bottom:4px}
+.head p{font-size:13px;opacity:.85}
+.body{padding:24px 28px}
+.info{border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:18px}
+.info .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+.info .row .l{color:#6b7280}
+.info .row.total{border-top:1px solid #eee;margin-top:6px;padding-top:8px}
+.info .row.total .amount{font-size:22px;font-weight:800;color:#1677FF}
+
+.qr-wrap{text-align:center;margin-bottom:12px}
+.qr-box{width:200px;height:200px;margin:0 auto 10px;border:3px solid #1677FF;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}
+.qr-box img{width:190px;height:190px;object-fit:contain}
+.qr-box .txt{color:#999;font-size:12px;text-align:center;line-height:1.6;padding:10px}
+.qr-hint{font-size:13px;color:#1e40af;font-weight:600;margin-bottom:4px}
+.qr-sub{font-size:11px;color:#6b7280;margin-bottom:16px}
+.qr-status{font-size:12px;color:#D97706;margin-top:6px}
+
+.footer{padding:12px 28px 24px;display:flex;gap:10px}
+.btn-back{flex:1;padding:11px;border-radius:10px;border:1px solid #d1d5db;background:#fff;font-size:14px;cursor:pointer}
+.btn-sim{flex:2;padding:12px;border-radius:10px;border:none;background:#1677FF;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.btn-sim:hover{background:#2563EB}
+
+.result{text-align:center;padding:30px 0}
+.result .icon{font-size:56px;margin-bottom:10px}
+.result h3{font-size:18px;margin-bottom:4px}
+.result p{font-size:13px;color:#6b7280}
+.result button{margin-top:18px;padding:10px 28px;border-radius:8px;border:none;background:#1677FF;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+
+.err{background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;font-size:12px;color:#DC2626;margin-bottom:14px}
+.loading{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#1677FF;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="head"><h2>收银台</h2><p id="paySub">订单号：加载中…</p></div>
+  <div class="loading" id="loading"><span class="spin"></span>加载订单信息…</div>
+
+  <div id="payPanel" style="display:none">
+    <div class="body">
+      <div class="err" id="errorBox" style="display:none"></div>
+      <div class="info">
+        <div class="row"><span class="l">订单号</span><span id="infoOrderNo">—</span></div>
+        <div class="row"><span class="l">类型</span><span id="infoType">—</span></div>
+        <div class="row"><span class="l">商品</span><span id="infoItems">—</span></div>
+        <div class="row total"><span class="l">应付金额</span><span class="amount" id="infoAmount">¥—</span></div>
+      </div>
+
+      <div class="qr-wrap" id="qrPanel">
+        <div class="qr-box" id="qrBox"><span class="txt">生成中…</span></div>
+        <div class="qr-hint">⚠ 请使用 <b>支付宝沙箱版</b> App 扫码</div>
+        <div class="qr-sub">打开支付宝沙箱 App → 扫一扫 → 完成支付</div>
+        <div class="qr-status" id="qrStatus"></div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn-back" onclick="closePay()">取消</button>
+      <button class="btn-sim" id="btnSim" onclick="simPay()">模拟支付 ¥<span id="btnAmount">0.00</span></button>
+    </div>
+  </div>
+
+  <div id="resultPanel" style="display:none">
+    <div class="result">
+      <div class="icon" id="resultIcon"></div>
+      <h3 id="resultTitle"></h3>
+      <p id="resultMsg"></p>
+      <button onclick="closePay()">返回订单页</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var params = new URLSearchParams(location.search)
+var orderId = params.get('order_id')
+var orderType = params.get('type')
+var orderNo = params.get('order_no') || ''
+var amount = params.get('amount') || '0'
+var items = params.get('items') || ''
+var token = params.get('token') || localStorage.getItem('zhiyi-token') || ''
+var apiBase = params.get('api') || '/api'
+
+if (!orderId || !token) {
+  document.getElementById('loading').innerHTML = '<div class="err">缺少订单参数或登录信息</div>'
+} else {
+  init()
+}
+
+var paid = false
+var pollTimer = null
+var outTradeNo = ''
+
+async function init() {
+  document.getElementById('paySub').textContent = orderNo || '订单号 #' + orderId
+  document.getElementById('infoOrderNo').textContent = orderNo || orderId
+  document.getElementById('infoType').textContent = orderType === 'exam' ? '检查预约' : '药品订单'
+  document.getElementById('infoItems').textContent = decodeURIComponent(items || '')
+  document.getElementById('infoAmount').textContent = '¥' + parseFloat(amount).toFixed(2)
+  document.getElementById('btnAmount').textContent = parseFloat(amount).toFixed(2)
+
+  // 创建支付宝扫码支付
+  try {
+    var resp = await fetch(apiBase + '/pay/alipay/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ order_id: parseInt(orderId), order_type: orderType, amount: parseFloat(amount) }),
+    })
+    var data = await resp.json()
+    outTradeNo = data.out_trade_no || ''
+
+    if (data.qr_data_url) {
+      // 沙箱扫码二维码
+      document.getElementById('qrBox').innerHTML = '<img src="' + data.qr_data_url + '" alt="支付宝沙箱扫码支付" />'
+      document.getElementById('qrStatus').textContent = '等待扫码支付…'
+      startPoll()
+    } else if (data.mock) {
+      // 降级为模拟支付
+      document.getElementById('qrBox').innerHTML = '<span class="txt">沙箱支付暂不可用<br/>请点击下方模拟支付</span>'
+    } else {
+      document.getElementById('qrBox').innerHTML = '<span class="txt">支付服务异常<br/>请点击下方模拟支付</span>'
+    }
+  } catch(e) {
+    document.getElementById('qrBox').innerHTML = '<span class="txt">网络异常<br/>请点击下方模拟支付</span>'
+  }
+
+  document.getElementById('loading').style.display = 'none'
+  document.getElementById('payPanel').style.display = ''
+}
+
+function startPoll() {
+  var count = 0
+  pollTimer = setInterval(async function() {
+    if (paid) { clearInterval(pollTimer); return }
+    count++
+    document.getElementById('qrStatus').textContent = '等待扫码支付…（' + (count * 2) + '秒）'
+
+    // 1. 轮询支付宝支付状态
+    if (outTradeNo) {
+      try {
+        var qr = await fetch(apiBase + '/pay/alipay/query?out_trade_no=' + encodeURIComponent(outTradeNo), {
+          headers: { Authorization: 'Bearer ' + token },
+        })
+        var qd = await qr.json()
+        if (qd.trade_status === 'TRADE_SUCCESS' || qd.trade_status === 'TRADE_FINISHED') {
+          paid = true; clearInterval(pollTimer)
+          // 支付成功 → 调用后端确认支付
+          await confirmPayment()
+          showSuccess()
+          return
+        }
+      } catch(e) {}
+    }
+
+    // 2. 同时检查订单状态（兼容模拟支付回调）
+    try {
+      var typePath = orderType === 'exam' ? 'exams' : 'drugs'
+      var resp = await fetch(apiBase + '/' + typePath + '/orders/' + orderId, {
+        headers: { Authorization: 'Bearer ' + token },
+      })
+      var data = await resp.json()
+      var st = orderType === 'exam' ? (data.overall_status || data.status) : data.pay_status
+      if (st === 'paid' || st === 'success') {
+        paid = true; clearInterval(pollTimer)
+        showSuccess()
+        return
+      }
+    } catch(e) {}
+
+    if (count >= 300) {
+      clearInterval(pollTimer)
+      document.getElementById('qrStatus').textContent = '支付超时，请使用模拟支付'
+    }
+  }, 2000)
+}
+
+async function confirmPayment() {
+  // 支付宝回调已确认支付，调用后端标记支付成功
+  try {
+    var typePath = orderType === 'exam' ? 'exams' : 'drugs'
+    await fetch(apiBase + '/' + typePath + '/orders/' + orderId + '/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: orderType === 'drug' ? JSON.stringify({ order_type: orderType, payment_method: 'alipay' }) : undefined,
+    })
+  } catch(e) {}
+}
+
+async function simPay() {
+  if (paid) return
+  var btn = document.getElementById('btnSim')
+  btn.disabled = true
+  btn.innerHTML = '处理中…'
+  try {
+    var typePath = orderType === 'exam' ? 'exams' : 'drugs'
+    var resp = await fetch(apiBase + '/' + typePath + '/orders/' + orderId + '/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: orderType === 'drug' ? JSON.stringify({ order_type: orderType, payment_method: 'mock' }) : undefined,
+    })
+    var data = await resp.json()
+    if (!resp.ok) throw new Error(data.detail || data.message || '支付失败')
+    clearInterval(pollTimer)
+    paid = true
+    showSuccess()
+  } catch(e) {
+    alert(e.message || '支付异常')
+    btn.disabled = false
+    btn.innerHTML = '模拟支付 ¥<span id="btnAmount">' + parseFloat(amount).toFixed(2) + '</span>'
+  }
+}
+
+function showSuccess() {
+  if (pollTimer) clearInterval(pollTimer)
+  document.getElementById('payPanel').style.display = 'none'
+  document.getElementById('resultPanel').style.display = ''
+  document.getElementById('resultIcon').textContent = '✅'
+  document.getElementById('resultTitle').textContent = '支付成功'
+  document.getElementById('resultMsg').textContent = orderNo + ' 已支付 ¥' + parseFloat(amount).toFixed(2)
+  if (window.opener && !window.opener.closed) {
+    try {
+      window.opener.postMessage({
+        type: 'payment-done', success: true, orderId: orderId, orderType: orderType
+      }, '*')
+    } catch(e) {}
+  }
+}
+
+function closePay() {
+  if (pollTimer) clearInterval(pollTimer)
+  if (window.opener && !window.opener.closed) { window.close() }
+  else { history.back() }
+}
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'close-pay') closePay()
+})
+</script>
+</body>
+</html>
